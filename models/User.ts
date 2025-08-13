@@ -14,6 +14,7 @@ export interface IUser extends Document {
   year?: number; // Only for students
   designation?: string; // Only for faculty
   verified: boolean;
+  favorites: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,7 +85,11 @@ const UserSchema: Schema = new Schema({
   verified: {
     type: Boolean,
     default: false
-  }
+  },
+  favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Room'
+  }]
 }, {
   timestamps: true
 });
