@@ -1,6 +1,7 @@
 // lib/types/room.ts
 export interface Room {
   id: string;
+  _id?: string; // MongoDB ObjectId
   title: string;
   type: 'pg' | 'room' | 'apartment';
   rent: number;

@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb'
 import Room from '@/models/Room'
 import User from '@/models/User'
 import { withAuth } from '@/lib/middleware/auth'
+import { sendNotification, NotificationTemplates } from '@/lib/utils/notifications'
 
 export const GET = withAuth(async (request: NextRequest, { userId }) => {
   try {
@@ -33,10 +34,6 @@ export const POST = withAuth(async (request: NextRequest, { userId }) => {
     const body = await request.json()
     const { roomId } = body
 
-    console.log('POST /api/rooms/favorites - Request body:', body)
-    console.log('POST /api/rooms/favorites - roomId:', roomId)
-    console.log('POST /api/rooms/favorites - userId:', userId)
-
     if (!roomId) {
       console.log('POST /api/rooms/favorites - Error: Room ID is missing')
       return NextResponse.json(
@@ -63,6 +60,21 @@ export const POST = withAuth(async (request: NextRequest, { userId }) => {
       user.favorites = user.favorites.filter((id: any) => id.toString() !== roomId)
     } else {
       user.favorites.push(roomId)
+
+      // Send notification to room owner when someone favorites their room
+      if (room.owner && room.owner.id) {
+        try {
+          await sendNotification(
+            room.owner.id,
+            NotificationTemplates.ROOM_FAVORITED(room.title, user.name, roomId),
+            userId,
+            { roomId, userId }
+          )
+        } catch (notifError) {
+          console.error('Error sending favorite notification:', notifError)
+          // Continue without failing the request
+        }
+      }
     }
 
     await user.save()

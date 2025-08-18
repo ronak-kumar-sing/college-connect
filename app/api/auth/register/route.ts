@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User, { IUser } from '@/models/User';
+import { sendNotification, NotificationTemplates } from '@/lib/utils/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,6 +87,19 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = new User(userData);
     await user.save();
+
+    // Send welcome notification
+    try {
+      await sendNotification(
+        user._id.toString(),
+        NotificationTemplates.WELCOME_NEW_USER(user.name),
+        undefined, // No sender for system notifications
+        { isWelcome: true }
+      )
+    } catch (notifError) {
+      console.error('Error sending welcome notification:', notifError)
+      // Continue without failing registration
+    }
 
     // Remove password from response
     const userResponse = {

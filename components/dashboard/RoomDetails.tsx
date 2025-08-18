@@ -21,6 +21,7 @@ import {
   Calendar,
   IndianRupee
 } from 'lucide-react'
+import { MessageOwner } from './MessageOwner'
 
 interface RoomDetailsProps {
   room: Room | null
@@ -31,7 +32,6 @@ interface RoomDetailsProps {
 
 export function RoomDetails({ room, onClose, onFavorite, onContact }: RoomDetailsProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [showContactModal, setShowContactModal] = useState(false)
 
   if (!room) return null
 
@@ -267,13 +267,14 @@ export function RoomDetails({ room, onClose, onFavorite, onContact }: RoomDetail
 
           {/* Contact Buttons */}
           <div className="space-y-2">
-            <Button
-              onClick={() => setShowContactModal(true)}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Contact Owner
-            </Button>
+            {room.owner && room.owner.id && (
+              <MessageOwner
+                propertyId={room.id}
+                ownerId={room.owner.id}
+                ownerName={room.owner.name}
+                propertyTitle={room.title}
+              />
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm">
                 <Phone className="h-4 w-4 mr-2" />
@@ -292,43 +293,6 @@ export function RoomDetails({ room, onClose, onFavorite, onContact }: RoomDetail
           </div>
         </div>
       </div>
-
-      {/* Contact Modal */}
-      <Modal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        title="Contact Owner"
-        className="max-w-md"
-      >
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium">
-                {room.owner.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <p className="font-medium">{room.owner.name}</p>
-              <p className="text-sm text-gray-600">Property Owner</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Button className="w-full" onClick={() => onContact(room)}>
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Send Message
-            </Button>
-            <Button variant="outline" className="w-full">
-              <Phone className="h-4 w-4 mr-2" />
-              {room.owner.phone}
-            </Button>
-            <Button variant="outline" className="w-full">
-              <Mail className="h-4 w-4 mr-2" />
-              {room.owner.email}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </>
   )
 }

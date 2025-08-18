@@ -30,6 +30,9 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'name'>('newest')
 
+  // Utility function to get room ID (handles both id and _id)
+  const getRoomId = (room: Room) => room.id || room._id || ''
+
   const fetchFavorites = async () => {
     try {
       setLoading(true)
@@ -37,8 +40,15 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
       const response = await fetch('/api/rooms/favorites?userId=sample-user-id')
       if (response.ok) {
         const data = await response.json()
+        console.log('Fetched favorites:', data.favorites)
+        // Log the first favorite to see the structure
+        if (data.favorites?.length > 0) {
+          console.log('First favorite structure:', data.favorites[0])
+        }
         setFavorites(data.favorites || [])
         setFilteredFavorites(data.favorites || [])
+      } else {
+        console.error('Failed to fetch favorites:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error fetching favorites:', error)
@@ -49,6 +59,7 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
 
   const removeFavorite = async (roomId: string) => {
     try {
+      console.log('Removing favorite for roomId:', roomId)
       const response = await fetch('/api/rooms/favorites', {
         method: 'DELETE',
         headers: {
@@ -60,9 +71,15 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
         })
       })
 
+      console.log('Delete response status:', response.status)
+
       if (response.ok) {
-        setFavorites(prev => prev.filter(room => room.id !== roomId))
-        setFilteredFavorites(prev => prev.filter(room => room.id !== roomId))
+        console.log('Successfully removed favorite')
+        setFavorites(prev => prev.filter(room => getRoomId(room) !== roomId))
+        setFilteredFavorites(prev => prev.filter(room => getRoomId(room) !== roomId))
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to remove favorite:', errorData)
       }
     } catch (error) {
       console.error('Error removing favorite:', error)
@@ -73,7 +90,7 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
     if (!confirm('Are you sure you want to remove all favorites?')) return
 
     try {
-      const promises = favorites.map(room => removeFavorite(room.id))
+      const promises = favorites.map(room => removeFavorite(getRoomId(room)))
       await Promise.all(promises)
     } catch (error) {
       console.error('Error clearing all favorites:', error)
@@ -236,11 +253,11 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
             }
           `}>
             {filteredFavorites.map((room) => (
-              <div key={room.id} className="relative group">
+              <div key={getRoomId(room)} className="relative group">
                 <RoomCard
                   room={room}
                   onSelect={() => handleRoomClick(room)}
-                  onFavorite={() => removeFavorite(room.id)}
+                  onFavorite={() => removeFavorite(getRoomId(room))}
                 />
 
                 {/* Quick Action Buttons */}
@@ -254,7 +271,7 @@ export function FavoritesComponent({ isOpen, onClose, onRoomSelect }: FavoritesC
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => removeFavorite(room.id)}
+                    onClick={() => removeFavorite(getRoomId(room))}
                     className="h-8 w-8 p-0 bg-white hover:bg-red-50 text-red-600 border border-gray-200 shadow-sm"
                   >
                     <Trash2 className="h-4 w-4" />

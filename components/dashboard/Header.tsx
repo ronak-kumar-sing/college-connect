@@ -1,13 +1,16 @@
 // components/dashboard/Header.tsx
 'use client'
-import React, { useState } from 'react'
-import { Search, Bell, Menu, Bug, Heart, User } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Search, Bell, Menu, Bug, Heart, User, MessageCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { ProfileComponent } from './ProfileComponent'
 import { FavoritesComponent } from './FavoritesComponent'
+import { NotificationDropdown } from './NotificationDropdown'
+import { ConnectionIndicator } from '@/components/debug/WebSocketStatus'
 import { Room } from '@/lib/types/room'
+import { useRouter } from 'next/navigation'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -21,6 +24,64 @@ export function Header({ onMenuClick, searchQuery, onSearchChange, onRoomSelect 
   const [bugReport, setBugReport] = useState('')
   const [showProfile, setShowProfile] = useState(false)
   const [showFavorites, setShowFavorites] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const notificationRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  // Fetch unread notification count on mount
+  useEffect(() => {
+    fetchUnreadCount()
+    fetchUnreadMessageCount()
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchUnreadCount()
+      fetchUnreadMessageCount()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch('/api/notifications?unread=true&limit=1')
+      if (response.ok) {
+        const data = await response.json()
+        setUnreadCount(data.unreadCount)
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
+
+  const fetchUnreadMessageCount = async () => {
+    try {
+      const response = await fetch('/api/notifications?unread=true&type=message&limit=1')
+      if (response.ok) {
+        const data = await response.json()
+        // Count only message notifications
+        setUnreadMessageCount(data.notifications?.filter((n: any) => n.type === 'message').length || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching unread message count:', error)
+    }
+  }
 
   const handleBugReport = async () => {
     // API call to submit bug report
@@ -70,6 +131,11 @@ export function Header({ onMenuClick, searchQuery, onSearchChange, onRoomSelect 
 
           {/* Right section */}
           <div className="flex items-center space-x-2">
+            {/* WebSocket Connection Status */}
+            <div className="hidden sm:flex">
+              <ConnectionIndicator />
+            </div>
+
             <Button
               variant="ghost"
               size="sm"
@@ -80,9 +146,42 @@ export function Header({ onMenuClick, searchQuery, onSearchChange, onRoomSelect 
               <span className="hidden sm:inline">Report Bug</span>
             </Button>
 
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            {/* Notification Button with Dropdown */}
+            <div className="relative" ref={notificationRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+
+              <NotificationDropdown
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+              />
+            </div>
+
+            {/* Messages Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/messages')}
+              className="relative"
+              title="Go to Messages"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {unreadMessageCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                </span>
+              )}
             </Button>
 
             <Button

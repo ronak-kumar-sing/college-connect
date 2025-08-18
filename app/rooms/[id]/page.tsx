@@ -11,6 +11,7 @@ import {
   Wifi, Car, Shield, Zap, Droplet, Phone, Mail,
   ArrowLeft, ImageIcon, ChevronLeft, ChevronRight
 } from 'lucide-react'
+import { MessageOwner } from '@/components/dashboard/MessageOwner'
 
 export default function RoomDetailsPage() {
   const params = useParams()
@@ -395,10 +396,14 @@ export default function RoomDetailsPage() {
                   <Phone className="w-4 h-4 mr-2" />
                   Call Owner
                 </Button>
-                <Button variant="outline" className="w-full" size="lg">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Message
-                </Button>
+                {room.owner && room.owner.id && (
+                  <MessageOwner
+                    propertyId={room.id}
+                    ownerId={room.owner.id}
+                    ownerName={room.owner.name}
+                    propertyTitle={room.title}
+                  />
+                )}
               </div>
             </div>
           </div>
